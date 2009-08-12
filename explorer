@@ -1,0 +1,56 @@
+#!/bin/bash
+usage="Usage: explorer [-env] [file]
+
+  -e	Opens Windows Explorer in its default view.
+  -n	Opens a new single-pane window for the default
+	selection. This is usually the root of the drive Windows
+	is installed on. If the window is already open, a
+	duplicate opens.
+  -v	Show the explorer.exe command to be executed."
+function usage {
+	if [[ $# -eq 1 && $1 -eq 0 ]]; then
+		echo "$usage"
+		exit 0
+	else
+		echo "$usage" >&2
+		exit 1
+	fi
+}
+declare -a args
+while getopts "ehnv" flag; do
+	case $flag in
+		e)	args+=( "/e" );;
+		n)	args+=( "/n" );;
+		v)	verbose=true;;
+		h)	usage 0;;
+		\?)	usage;;
+		*)	usage;;
+	esac
+done
+shift $(( $OPTIND - 1 ))
+if [[ $# -eq 0 ]]; then
+	file="$PWD"
+elif [[ $# -eq 1 ]]; then
+	file="$1"
+else
+	usage
+fi
+win_file="$(cygpath -w "$file")"
+if [[ ! -e "$file" ]]; then
+	echo "explorer: No such file or directory" >&2
+	exit 1
+elif [[ -f "$file" ]]; then
+	args+=( "/select" "$win_file" )
+else
+	args+=( "/root" "$win_file" )
+fi
+
+join() {
+	string=$(printf "%s," "$@")
+	string="${string%,}"
+	echo $string
+}
+
+command="exec explorer.exe $(join "${args[@]}")"
+[[ -n "$verbose" ]] && echo "${command#exec }"
+$command
