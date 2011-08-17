@@ -1,0 +1,30 @@
+#!/bin/zsh
+emulate -L zsh
+setopt err_exit
+
+typeset -r PROGNAME="${0##*/}"
+typeset -r CONIN="${CONIN:-"/usr/local/bin/conin"}"
+typeset -r WINPWD="$(cygpath -w "$PWD")"
+typeset -a winargs arguments
+
+typeset escaped_args="${${${*//</<^}//>/^>}//|/^|}"
+if [[ "$PROGNAME" != "cmdsh" ]]; then
+	winargs+=( "$PROGNAME $escaped_args" )
+	arguments+=( "/C" )
+elif [[ $# -ge 1 ]]; then
+	winargs+=( "$escaped_args" )
+	arguments+=( "/C" )
+else
+	typeset interactive
+	arguments+=( "/K" )
+fi
+
+typeset -a cmd
+if [[ -t 0 && -t 1 && -t 2 ]]; then
+	cmd+=( "$CONIN" "$COMSPEC" )
+else
+	cmd+=( "$(cygpath -u "$COMSPEC")" )
+fi
+cmd+=( "${arguments[@]}" "${(j:&:)winargs[*]}" )
+
+exec "${cmd[@]}"
